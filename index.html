@@ -153,6 +153,15 @@ tr:last-child td{border-bottom:none;}
 .vat-tag{background:var(--cream); border:1px solid var(--line); border-radius:9px; padding:6px 10px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px;}
 .vat-tag button{background:none; border:none; color:var(--chili); font-weight:800;}
 .iconbtn{background:var(--cream); border:1.5px solid var(--line); border-radius:11px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto;}
+.table-card{background:var(--paper); border:1.5px solid var(--line); border-radius:12px; padding:13px; text-align:left; box-shadow:var(--shadow); position:relative;}
+.table-card.occupied{background:#FBF0DA; border-color:var(--turmeric);}
+.table-card .tc-name{font-weight:800; font-size:14px; margin-bottom:4px;}
+.table-card .tc-info{font-size:11.5px; color:var(--ink-soft);}
+.table-card .tc-total{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--turmeric-dark); font-size:13.5px; margin-top:6px;}
+.table-card .tc-status{position:absolute; top:10px; right:10px; width:9px; height:9px; border-radius:99px; background:#C9BC9E;}
+.table-card.occupied .tc-status{background:var(--turmeric);}
+.preset-chip{background:var(--cream); border:1.5px solid var(--line); border-radius:10px; padding:9px 14px; font-weight:700; font-size:13px;}
+.preset-chip.selected{background:var(--ink); color:#fff; border-color:var(--ink);}
 </style>
 </head>
 <body>
@@ -179,52 +188,73 @@ tr:last-child td{border-bottom:none;}
 
   <!-- PAGE: POS -->
   <section class="page active" id="page-pos">
-    <div class="cat-scroll" id="catScroll"></div>
-    <div class="scanbar">
-      <div class="searchbox">
-        <input type="text" id="posSearch" placeholder="Tìm món hoặc quét mã…">
-      </div>
-      <button class="iconbtn" id="btnScan" title="Quét QR / mã vạch">▦</button>
-    </div>
-    <div class="prod-grid" id="posGrid"></div>
 
-    <div class="section-title">Đơn hiện tại</div>
-    <div class="receipt">
-      <div class="receipt-body">
-        <div id="cartItems"></div>
-        <div id="cartEmpty" class="empty-cart">🧾 Chưa có món nào trong đơn.<br>Chạm vào món hoặc quét mã để thêm.</div>
+    <div id="tableListView">
+      <div class="row" style="margin-bottom:10px;">
+        <h2 style="font-size:18px;">Bàn / Đơn đang phục vụ</h2>
+        <button class="btn btn-primary btn-sm" id="btnNewTable">+ Bàn mới</button>
       </div>
-      <div class="receipt-edge"></div>
-      <div class="receipt-body" id="cartSummary" style="display:none;">
-        <div class="sum-row"><span>Tạm tính</span><span class="num" id="sumSubtotal">0</span></div>
-        <div id="sumVatRows"></div>
-        <div class="sum-row" id="sumDiscountRow" style="display:none;"><span>Giảm giá</span><span class="num" id="sumDiscount">0</span></div>
-        <div class="sum-row total"><span>Tổng cộng</span><span class="num" id="sumTotal">0</span></div>
-      </div>
+      <div class="prod-grid" id="tableGrid"></div>
+      <div id="tableGridEmpty" class="hint" style="padding:20px 4px; text-align:center;">Chưa có bàn nào đang phục vụ. Bấm "+ Bàn mới" để bắt đầu order.</div>
     </div>
 
-    <div class="card" id="checkoutPanel" style="display:none; margin-top:12px;">
-      <div class="field">
-        <label>Khách hàng (không bắt buộc)</label>
-        <input type="text" id="custName" placeholder="Tên khách / bàn số...">
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>Giảm giá (đ)</label>
-          <input type="number" id="discountInput" value="0" min="0">
+    <div id="orderView" style="display:none;">
+      <div class="row" style="margin-bottom:10px; gap:8px;">
+        <button class="iconbtn" id="btnBackToTables" title="Quay lại danh sách bàn">←</button>
+        <div style="flex:1; text-align:center;">
+          <div style="font-weight:800; font-size:15px;" id="currentTableLabel">Bàn</div>
+          <div class="hint" id="currentTableSub">Đang order</div>
         </div>
-        <div class="field">
-          <label>Thanh toán</label>
-          <select id="payMethod">
-            <option value="Tiền mặt">Tiền mặt</option>
-            <option value="Chuyển khoản">Chuyển khoản</option>
-            <option value="Thẻ / Ví điện tử">Thẻ / Ví điện tử</option>
-          </select>
+        <button class="btn btn-danger btn-sm" id="btnCancelTicket">Huỷ bàn</button>
+      </div>
+
+      <div class="cat-scroll" id="catScroll"></div>
+      <div class="scanbar">
+        <div class="searchbox">
+          <input type="text" id="posSearch" placeholder="Tìm món hoặc quét mã…">
+        </div>
+        <button class="iconbtn" id="btnScan" title="Quét QR / mã vạch">▦</button>
+      </div>
+      <div class="prod-grid" id="posGrid"></div>
+
+      <div class="section-title">Đơn hiện tại</div>
+      <div class="receipt">
+        <div class="receipt-body">
+          <div id="cartItems"></div>
+          <div id="cartEmpty" class="empty-cart">🧾 Chưa có món nào trong đơn.<br>Chạm vào món hoặc quét mã để thêm.</div>
+        </div>
+        <div class="receipt-edge"></div>
+        <div class="receipt-body" id="cartSummary" style="display:none;">
+          <div class="sum-row"><span>Tạm tính</span><span class="num" id="sumSubtotal">0</span></div>
+          <div id="sumVatRows"></div>
+          <div class="sum-row" id="sumDiscountRow" style="display:none;"><span>Giảm giá</span><span class="num" id="sumDiscount">0</span></div>
+          <div class="sum-row total"><span>Tổng cộng</span><span class="num" id="sumTotal">0</span></div>
         </div>
       </div>
-      <div style="display:flex; gap:8px; margin-top:6px;">
-        <button class="btn btn-ghost btn-sm" id="btnClearCart">Xoá đơn</button>
-        <button class="btn btn-primary btn-block" id="btnCheckout">✓ Thanh toán</button>
+
+      <div class="card" id="checkoutPanel" style="display:none; margin-top:12px;">
+        <div class="field">
+          <label>Tên khách (không bắt buộc)</label>
+          <input type="text" id="custName" placeholder="Ghi chú khách...">
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Giảm giá (đ)</label>
+            <input type="number" id="discountInput" value="0" min="0">
+          </div>
+          <div class="field">
+            <label>Thanh toán</label>
+            <select id="payMethod">
+              <option value="Tiền mặt">Tiền mặt</option>
+              <option value="Chuyển khoản">Chuyển khoản</option>
+              <option value="Thẻ / Ví điện tử">Thẻ / Ví điện tử</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button class="btn btn-ghost btn-sm" id="btnClearCart">Xoá hết món</button>
+          <button class="btn btn-primary btn-block" id="btnCheckout">✓ Thanh toán</button>
+        </div>
       </div>
     </div>
   </section>
@@ -409,6 +439,20 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- New Table Modal -->
+<div class="modal-overlay" id="newTableModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><h3>Mở bàn mới</h3><button class="modal-close" id="closeNewTableModal">✕</button></div>
+    <div class="swatch-row" id="tablePresets" style="margin-bottom:12px;"></div>
+    <div class="field">
+      <label>Hoặc đặt tên khác</label>
+      <input type="text" id="customTableName" placeholder="VD: Bàn VIP, Sân sau...">
+    </div>
+    <button class="btn btn-primary btn-block" id="btnCreateTable">Mở bàn</button>
+  </div>
+</div>
+
 <!-- Server Connection Setup Modal -->
 <div class="modal-overlay" id="setupModal" style="align-items:center;">
   <div class="modal-sheet" style="border-radius:20px; max-width:440px;">
@@ -472,6 +516,7 @@ function subscribeRealtime(){
     .on('postgres_changes', {event:'*', schema:'public', table:'products'}, ()=>refreshFromCloud(['products']))
     .on('postgres_changes', {event:'*', schema:'public', table:'orders'}, ()=>refreshFromCloud(['orders']))
     .on('postgres_changes', {event:'*', schema:'public', table:'settings'}, ()=>refreshFromCloud(['settings']))
+    .on('postgres_changes', {event:'*', schema:'public', table:'open_tickets'}, ()=>refreshFromCloud(['tickets']))
     .subscribe();
 }
 
@@ -479,7 +524,10 @@ function mapDbProduct(r){
   return {id:r.id, name:r.name, price:Number(r.price), unit:r.unit, category:r.category, vatRate:Number(r.vat_rate), barcode:r.barcode||'', active:r.active};
 }
 function mapDbOrder(r){
-  return {id:r.id, code:r.code, createdAt:r.created_at, items:r.items||[], subtotal:Number(r.subtotal), vatByRate:r.vat_by_rate||{}, vatTotal:Number(r.vat_total), discount:Number(r.discount), total:Number(r.total), paymentMethod:r.payment_method, customerName:r.customer_name||'', status:r.status};
+  return {id:r.id, code:r.code, createdAt:r.created_at, items:r.items||[], subtotal:Number(r.subtotal), vatByRate:r.vat_by_rate||{}, vatTotal:Number(r.vat_total), discount:Number(r.discount), total:Number(r.total), paymentMethod:r.payment_method, customerName:r.customer_name||'', tableName:r.table_name||'', status:r.status};
+}
+function mapDbTicket(r){
+  return {id:r.id, tableName:r.table_name, items:r.items||[], discount:Number(r.discount||0), customerName:r.customer_name||'', createdAt:r.created_at};
 }
 
 async function refreshFromCloud(parts){
@@ -500,6 +548,10 @@ async function refreshFromCloud(parts){
         if(row.key==='categories') CATEGORIES = row.value;
       });
     }
+    if(!parts || parts.includes('tickets')){
+      const {data} = await sb.from('open_tickets').select('*').order('created_at');
+      TICKETS = (data||[]).map(mapDbTicket);
+    }
     setSyncStatus('ok');
     rerenderAll();
   }catch(e){ setSyncStatus('fail'); }
@@ -508,7 +560,7 @@ async function refreshFromCloud(parts){
 function rerenderAll(){
   document.getElementById('shopNameDisplay').textContent = CONFIG.name || "Quán Ăn";
   renderCategoryChips(); renderProductGrid(); renderCart(); renderProductList();
-  renderVatRates(); renderCatList(); fillConfigForm(); renderOrders();
+  renderVatRates(); renderCatList(); fillConfigForm(); renderOrders(); renderTableGrid();
   if(document.getElementById('page-stats').classList.contains('active')) renderStats();
 }
 
@@ -517,6 +569,8 @@ let CONFIG = { name:"Quán Ăn Cô Ba", address:"", phone:"", taxCode:"", prefix
 let CATEGORIES = ["Món chính","Nước uống","Khai vị","Tráng miệng"];
 let PRODUCTS = [];
 let ORDERS = [];
+let TICKETS = []; // open tables: {id, tableName, items, discount, customerName, createdAt}
+let currentTicketId = null;
 let CART = []; // {productId, name, price, qty, vatRate, unit}
 let activeCategory = "Tất cả";
 let zxingReader = null;
@@ -603,7 +657,7 @@ function bindSetupModal(){
 }
 
 async function bootstrapApp(){
-  await refreshFromCloud(['products','orders','settings']);
+  await refreshFromCloud(['products','orders','settings','tickets']);
   if(PRODUCTS.length===0){
     const seed = seedProducts();
     for(const p of seed){ await sb.from('products').insert(dbProductRow(p)); }
@@ -619,7 +673,10 @@ function dbProductRow(p){
   return {id:p.id, name:p.name, price:p.price, unit:p.unit, category:p.category, vat_rate:p.vatRate, barcode:p.barcode||'', active:p.active};
 }
 function dbOrderRow(o){
-  return {id:o.id, code:o.code, created_at:o.createdAt, items:o.items, subtotal:o.subtotal, vat_by_rate:o.vatByRate, vat_total:o.vatTotal, discount:o.discount, total:o.total, payment_method:o.paymentMethod, customer_name:o.customerName, status:o.status};
+  return {id:o.id, code:o.code, created_at:o.createdAt, items:o.items, subtotal:o.subtotal, vat_by_rate:o.vatByRate, vat_total:o.vatTotal, discount:o.discount, total:o.total, payment_method:o.paymentMethod, customer_name:o.customerName, table_name:o.tableName||'', status:o.status};
+}
+function dbTicketRow(t){
+  return {id:t.id, table_name:t.tableName, items:t.items, discount:t.discount||0, customer_name:t.customerName||''};
 }
 
 function seedProducts(){
@@ -652,6 +709,12 @@ function bindEvents(){
     });
   });
 
+  document.getElementById('btnNewTable').addEventListener('click', openNewTableModal);
+  document.getElementById('closeNewTableModal').addEventListener('click', ()=>toggleModal('newTableModal', false));
+  document.getElementById('btnCreateTable').addEventListener('click', createTable);
+  document.getElementById('btnBackToTables').addEventListener('click', backToTables);
+  document.getElementById('btnCancelTicket').addEventListener('click', cancelCurrentTicket);
+
   document.getElementById('posSearch').addEventListener('input', renderProductGrid);
   document.getElementById('prodSearch').addEventListener('input', renderProductList);
 
@@ -663,10 +726,11 @@ function bindEvents(){
   });
 
   document.getElementById('btnClearCart').addEventListener('click', ()=>{
-    if(CART.length && confirm('Xoá toàn bộ đơn hiện tại?')){ CART=[]; renderCart(); }
+    if(CART.length && confirm('Xoá toàn bộ món trong đơn này?')){ CART=[]; renderCart(); persistCurrentTicket(); }
   });
   document.getElementById('btnCheckout').addEventListener('click', checkout);
-  document.getElementById('discountInput').addEventListener('input', renderCart);
+  document.getElementById('discountInput').addEventListener('input', ()=>{ renderCart(); persistCurrentTicket(); });
+  document.getElementById('custName').addEventListener('input', persistCurrentTicket);
 
   document.getElementById('btnAddProduct').addEventListener('click', ()=>openProductModal(null));
   document.getElementById('closeProductModal').addEventListener('click', ()=>toggleModal('productModal',false));
@@ -730,6 +794,111 @@ function renderProductGrid(){
 
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/* ---------- Tables / Tickets ---------- */
+function ticketTotal(t){
+  return t.items.reduce((s,it)=>{
+    const line = it.price*it.qty;
+    return s + line + line*(it.vatRate||0)/100;
+  }, 0) - (t.discount||0);
+}
+
+function renderTableGrid(){
+  const grid = document.getElementById('tableGrid');
+  const empty = document.getElementById('tableGridEmpty');
+  if(TICKETS.length===0){ grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  grid.innerHTML = TICKETS.map(t=>{
+    const occupied = t.items.length>0;
+    return `<button class="table-card ${occupied?'occupied':''}" data-id="${t.id}">
+      <span class="tc-status"></span>
+      <div class="tc-name">${escapeHtml(t.tableName)}</div>
+      <div class="tc-info">${occupied ? t.items.reduce((s,i)=>s+i.qty,0)+' món' : 'Chưa gọi món'}</div>
+      ${occupied?`<div class="tc-total num">${fmt(ticketTotal(t))}</div>`:''}
+    </button>`;
+  }).join('');
+  grid.querySelectorAll('.table-card').forEach(card=>{
+    card.addEventListener('click', ()=>openTicket(card.dataset.id));
+  });
+}
+
+function openNewTableModal(){
+  const used = new Set(TICKETS.map(t=>t.tableName));
+  const presets = [];
+  for(let i=1;i<=8;i++) presets.push('Bàn '+i);
+  presets.push('Mang về','Giao hàng');
+  document.getElementById('tablePresets').innerHTML = presets.map(p=>
+    `<button class="preset-chip" data-name="${escapeHtml(p)}" ${used.has(p)?'disabled style="opacity:.4;"':''}>${escapeHtml(p)}</button>`).join('');
+  document.getElementById('customTableName').value='';
+  document.querySelectorAll('.preset-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.querySelectorAll('.preset-chip').forEach(c=>c.classList.remove('selected'));
+      chip.classList.add('selected');
+      document.getElementById('customTableName').value = chip.dataset.name;
+    });
+  });
+  toggleModal('newTableModal', true);
+}
+
+async function createTable(){
+  const name = document.getElementById('customTableName').value.trim();
+  if(!name){ toast('Chọn hoặc nhập tên bàn'); return; }
+  if(TICKETS.find(t=>t.tableName===name)){ toast('Bàn này đang mở, chọn tên khác'); return; }
+  const ticket = {id:uid(), tableName:name, items:[], discount:0, customerName:''};
+  const {error} = await sb.from('open_tickets').insert(dbTicketRow(ticket));
+  if(error){ toast('Lỗi mở bàn — kiểm tra kết nối mạng'); return; }
+  TICKETS.push(ticket);
+  toggleModal('newTableModal', false);
+  renderTableGrid();
+  openTicket(ticket.id);
+}
+
+function openTicket(id){
+  const t = TICKETS.find(x=>x.id===id);
+  if(!t) return;
+  currentTicketId = id;
+  CART = t.items.map(it=>({...it}));
+  document.getElementById('currentTableLabel').textContent = t.tableName;
+  document.getElementById('currentTableSub').textContent = 'Đang order';
+  document.getElementById('custName').value = t.customerName||'';
+  document.getElementById('discountInput').value = t.discount||0;
+  document.getElementById('tableListView').style.display='none';
+  document.getElementById('orderView').style.display='block';
+  activeCategory = "Tất cả";
+  renderCategoryChips(); renderProductGrid(); renderCart();
+}
+
+function backToTables(){
+  currentTicketId = null;
+  CART = [];
+  document.getElementById('orderView').style.display='none';
+  document.getElementById('tableListView').style.display='block';
+  renderTableGrid();
+}
+
+let ticketSaveTimer = null;
+function persistCurrentTicket(){
+  if(!currentTicketId) return;
+  const t = TICKETS.find(x=>x.id===currentTicketId);
+  if(!t) return;
+  t.items = CART.map(it=>({...it}));
+  t.discount = Number(document.getElementById('discountInput').value||0);
+  t.customerName = document.getElementById('custName').value.trim();
+  clearTimeout(ticketSaveTimer);
+  ticketSaveTimer = setTimeout(async ()=>{
+    await sb.from('open_tickets').update({items:t.items, discount:t.discount, customer_name:t.customerName}).eq('id', t.id);
+  }, 400);
+}
+
+async function cancelCurrentTicket(){
+  if(!currentTicketId) return;
+  const t = TICKETS.find(x=>x.id===currentTicketId);
+  if(!confirm('Huỷ bàn "'+(t?t.tableName:'')+'"? Toàn bộ món trong đơn sẽ mất, không tính vào doanh thu.')) return;
+  await sb.from('open_tickets').delete().eq('id', currentTicketId);
+  TICKETS = TICKETS.filter(x=>x.id!==currentTicketId);
+  backToTables();
+  toast('Đã huỷ bàn');
+}
+
 /* ---------- Cart ---------- */
 function addToCart(productId){
   const p = PRODUCTS.find(x=>x.id===productId);
@@ -737,7 +906,7 @@ function addToCart(productId){
   const existing = CART.find(c=>c.productId===productId);
   if(existing) existing.qty += 1;
   else CART.push({productId:p.id, name:p.name, price:p.price, qty:1, vatRate:p.vatRate||0, unit:p.unit});
-  renderCart(); renderProductGrid();
+  renderCart(); renderProductGrid(); persistCurrentTicket();
   toast(p.name+' đã thêm');
 }
 
@@ -746,7 +915,7 @@ function changeQty(productId, delta){
   if(!item) return;
   item.qty += delta;
   if(item.qty<=0) CART = CART.filter(c=>c.productId!==productId);
-  renderCart(); renderProductGrid();
+  renderCart(); renderProductGrid(); persistCurrentTicket();
 }
 
 function renderCart(){
@@ -778,7 +947,7 @@ function renderCart(){
       const id = btn.dataset.id;
       if(btn.dataset.act==='plus') changeQty(id,1);
       else if(btn.dataset.act==='minus') changeQty(id,-1);
-      else if(btn.dataset.act==='del'){ CART = CART.filter(c=>c.productId!==id); renderCart(); renderProductGrid(); }
+      else if(btn.dataset.act==='del'){ CART = CART.filter(c=>c.productId!==id); renderCart(); renderProductGrid(); persistCurrentTicket(); }
     });
   });
 
@@ -810,6 +979,7 @@ function computeTotals(items, discount){
 /* ---------- Checkout ---------- */
 async function checkout(){
   if(CART.length===0) return;
+  const ticket = TICKETS.find(t=>t.id===currentTicketId);
   const discount = Number(document.getElementById('discountInput').value||0);
   const totals = computeTotals(CART, discount);
   const seq = (ORDERS.length+1).toString().padStart(5,'0');
@@ -825,16 +995,21 @@ async function checkout(){
     total: totals.total,
     paymentMethod: document.getElementById('payMethod').value,
     customerName: document.getElementById('custName').value.trim(),
+    tableName: ticket ? ticket.tableName : '',
     status: 'completed'
   };
   const {error} = await sb.from('orders').insert(dbOrderRow(order));
   if(error){ toast('Lỗi lưu đơn hàng — kiểm tra kết nối mạng'); return; }
   ORDERS.unshift(order);
+  if(currentTicketId){
+    await sb.from('open_tickets').delete().eq('id', currentTicketId);
+    TICKETS = TICKETS.filter(t=>t.id!==currentTicketId);
+  }
   CART = [];
   document.getElementById('discountInput').value = 0;
   document.getElementById('custName').value = '';
-  renderCart(); renderProductGrid();
   toast('Thanh toán thành công · '+order.code);
+  backToTables();
   showInvoice(order);
 }
 
@@ -852,6 +1027,7 @@ function showInvoice(order){
     </div>
     <div class="divider"></div>
     <div class="row hint"><span>Số HĐ: <b class="num" style="color:var(--ink)">${order.code}</b></span><span>${dt.toLocaleString('vi-VN')}</span></div>
+    ${order.tableName?`<div class="hint">Bàn: <b style="color:var(--ink)">${escapeHtml(order.tableName)}</b></div>`:''}
     ${order.customerName?`<div class="hint">Khách: ${escapeHtml(order.customerName)}</div>`:''}
     <div class="divider"></div>
     ${order.items.map(it=>`<div class="receipt-item"><div class="ri-name">${escapeHtml(it.name)}<div class="ri-sub">${fmt(it.price)} × ${it.qty}</div></div><div class="ri-total num">${fmt(it.price*it.qty)}</div></div>`).join('')}
@@ -932,7 +1108,7 @@ function renderOrders(){
     const dotColor = o.status==='void' ? 'var(--chili)' : 'var(--teal)';
     return `<div class="order-row" data-id="${o.id}" style="cursor:pointer;">
       <div>
-        <div style="font-weight:700; font-size:13px;"><span class="status-dot" style="background:${dotColor}"></span>${o.code}</div>
+        <div style="font-weight:700; font-size:13px;"><span class="status-dot" style="background:${dotColor}"></span>${o.code} ${o.tableName?'· '+escapeHtml(o.tableName):''}</div>
         <div class="hint">${dt.toLocaleString('vi-VN')} · ${o.paymentMethod}</div>
       </div>
       <div class="num" style="font-weight:700;">${fmt(o.total)}</div>
@@ -948,10 +1124,10 @@ function renderOrders(){
 
 function exportCSV(orders){
   if(!orders || orders.length===0){ toast('Không có dữ liệu để xuất'); return; }
-  let rows = [['Số HĐ','Ngày giờ','Khách hàng','Món','SL','Đơn giá','VAT %','Thành tiền','Giảm giá đơn','Thanh toán','Trạng thái']];
+  let rows = [['Số HĐ','Bàn','Ngày giờ','Khách hàng','Món','SL','Đơn giá','VAT %','Thành tiền','Giảm giá đơn','Thanh toán','Trạng thái']];
   orders.forEach(o=>{
     o.items.forEach(it=>{
-      rows.push([o.code, new Date(o.createdAt).toLocaleString('vi-VN'), o.customerName||'', it.name, it.qty, it.price, it.vatRate, it.price*it.qty, o.discount, o.paymentMethod, o.status==='void'?'Đã huỷ':'Hoàn tất']);
+      rows.push([o.code, o.tableName||'', new Date(o.createdAt).toLocaleString('vi-VN'), o.customerName||'', it.name, it.qty, it.price, it.vatRate, it.price*it.qty, o.discount, o.paymentMethod, o.status==='void'?'Đã huỷ':'Hoàn tất']);
     });
   });
   const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -1183,18 +1359,20 @@ async function addCategory(){
 }
 
 async function resetData(){
-  if(!confirm('Xoá toàn bộ đơn hàng, sản phẩm và cấu hình trên MÁY CHỦ DÙNG CHUNG? Hành động này không thể hoàn tác và ảnh hưởng mọi thiết bị.')) return;
+  if(!confirm('Xoá toàn bộ đơn hàng, sản phẩm, bàn đang mở và cấu hình trên MÁY CHỦ DÙNG CHUNG? Hành động này không thể hoàn tác và ảnh hưởng mọi thiết bị.')) return;
   await sb.from('orders').delete().neq('id','');
   await sb.from('products').delete().neq('id','');
+  await sb.from('open_tickets').delete().neq('id','');
   CONFIG = { name:"Quán Ăn Cô Ba", address:"", phone:"", taxCode:"", prefix:"HD", vatRates:[0,5,8,10] };
   CATEGORIES = ["Món chính","Nước uống","Khai vị","Tráng miệng"];
   await saveSetting('shop-config', CONFIG);
   await saveSetting('categories', CATEGORIES);
   const seed = seedProducts();
   for(const p of seed){ await sb.from('products').insert(dbProductRow(p)); }
-  await refreshFromCloud(['products','orders','settings']);
-  CART=[];
-  renderProductGrid(); renderProductList(); renderCart(); renderOrders(); renderVatRates(); renderCatList(); fillConfigForm();
+  await refreshFromCloud(['products','orders','settings','tickets']);
+  CART=[]; currentTicketId=null;
+  backToTables();
+  renderProductGrid(); renderProductList(); renderOrders(); renderVatRates(); renderCatList(); fillConfigForm();
   toast('Đã đặt lại dữ liệu');
 }
 
