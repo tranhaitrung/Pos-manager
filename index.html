@@ -6,7 +6,7 @@
 <title>Sổ Bán Hàng — POS Quán Ăn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -519,8 +519,29 @@ let PRODUCTS = [];
 let ORDERS = [];
 let CART = []; // {productId, name, price, qty, vatRate, unit}
 let activeCategory = "Tất cả";
-let scanStream = null;
-let scanLoopId = null;
+let zxingReader = null;
+async function openScanner(){
+  toggleModal('scanModal', true);
+  document.getElementById('manualCode').value='';
+  document.getElementById('scanStatus').textContent = 'Đang bật camera...';
+  try{
+    if(!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+    let handled = false;
+    await zxingReader.decodeFromVideoDevice(undefined, 'scanVideo', (result, err)=>{
+      if(result && !handled){
+        handled = true;
+        handleScannedCode(result.getText());
+      }
+    });
+    document.getElementById('scanStatus').textContent = 'Đưa mã QR hoặc mã vạch vào khung hình để quét.';
+  }catch(e){
+    document.getElementById('scanStatus').textContent = 'Không thể truy cập camera. Vui lòng nhập mã thủ công bên dưới.';
+  }
+}
+function closeScanner(){
+  toggleModal('scanModal', false);
+  if(zxingReader){ try{ zxingReader.reset(); }catch(e){} }
+}
 
 const fmt = n => Math.round(n||0).toLocaleString('vi-VN') + 'đ';
 const fmt2 = n => Math.round(n||0).toLocaleString('vi-VN');
@@ -1174,42 +1195,6 @@ async function resetData(){
 }
 
 /* ---------- Barcode / QR scanning ---------- */
-async function openScanner(){
-  toggleModal('scanModal', true);
-  document.getElementById('manualCode').value='';
-  document.getElementById('scanStatus').textContent = 'Đang bật camera...';
-  try{
-    scanStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
-    const video = document.getElementById('scanVideo');
-    video.srcObject = scanStream;
-    await video.play();
-    document.getElementById('scanStatus').textContent = 'Đưa mã QR vào khung hình để quét.';
-    scanLoop();
-  }catch(e){
-    document.getElementById('scanStatus').textContent = 'Không thể truy cập camera. Vui lòng nhập mã thủ công bên dưới.';
-  }
-}
-function closeScanner(){
-  toggleModal('scanModal', false);
-  if(scanLoopId) cancelAnimationFrame(scanLoopId);
-  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream=null; }
-}
-function scanLoop(){
-  const video = document.getElementById('scanVideo');
-  const canvas = document.getElementById('scanCanvas');
-  if(video.readyState === video.HAVE_ENOUGH_DATA){
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
-    const code = window.jsQR ? jsQR(imgData.data, imgData.width, imgData.height) : null;
-    if(code && code.data){
-      handleScannedCode(code.data);
-      return;
-    }
-  }
-  scanLoopId = requestAnimationFrame(scanLoop);
-}
 function handleScannedCode(code){
   closeScanner();
   const p = PRODUCTS.find(x=> x.barcode && x.barcode===code);
