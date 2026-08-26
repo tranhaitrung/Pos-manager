@@ -6,7 +6,7 @@
 <title>Sổ Bán Hàng — POS Quán Ăn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="./zxing.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -524,6 +524,10 @@ async function openScanner(){
   toggleModal('scanModal', true);
   document.getElementById('manualCode').value='';
   document.getElementById('scanStatus').textContent = 'Đang bật camera...';
+  if(typeof ZXing === 'undefined'){
+    document.getElementById('scanStatus').textContent = 'Lỗi: chưa tải được thư viện quét mã. Vui lòng tải lại trang (kéo xuống làm mới) rồi thử lại, hoặc nhập mã thủ công bên dưới.';
+    return;
+  }
   try{
     if(!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
     let handled = false;
@@ -535,7 +539,7 @@ async function openScanner(){
     });
     document.getElementById('scanStatus').textContent = 'Đưa mã QR hoặc mã vạch vào khung hình để quét.';
   }catch(e){
-    document.getElementById('scanStatus').textContent = 'Không thể truy cập camera. Vui lòng nhập mã thủ công bên dưới.';
+    document.getElementById('scanStatus').textContent = 'Không thể truy cập camera (có thể do chưa cấp quyền camera cho trình duyệt). Vui lòng nhập mã thủ công bên dưới.';
   }
 }
 function closeScanner(){
