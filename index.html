@@ -191,21 +191,32 @@ tr:last-child td{border-bottom:none;}
 
     <div id="tableListView">
       <div class="row" style="margin-bottom:10px;">
-        <h2 style="font-size:18px;">Bàn / Đơn đang phục vụ</h2>
-        <button class="btn btn-primary btn-sm" id="btnNewTable">+ Bàn mới</button>
+        <h2 style="font-size:18px;">Sơ đồ bàn</h2>
+        <span class="hint">Chạm vào bàn để xem/mở hoá đơn</span>
       </div>
       <div class="prod-grid" id="tableGrid"></div>
-      <div id="tableGridEmpty" class="hint" style="padding:20px 4px; text-align:center;">Chưa có bàn nào đang phục vụ. Bấm "+ Bàn mới" để bắt đầu order.</div>
+      <div id="tableGridEmpty" class="hint" style="padding:20px 4px; text-align:center; display:none;">Chưa cấu hình bàn nào. Vào Cấu hình → Số lượng bàn để thiết lập.</div>
+    </div>
+
+    <div id="tableDetailView" style="display:none;">
+      <div class="row" style="margin-bottom:10px; gap:8px;">
+        <button class="iconbtn" id="btnBackToTableGrid" title="Quay lại sơ đồ bàn">←</button>
+        <div style="flex:1; text-align:center; font-weight:800; font-size:15px;" id="tableDetailTitle">Bàn</div>
+        <button class="btn btn-primary btn-sm" id="btnAddInvoice">+ Hoá đơn</button>
+      </div>
+      <div class="hint" style="margin-bottom:10px;">Bàn ngồi ghép có thể mở nhiều hoá đơn riêng, thanh toán tách biệt.</div>
+      <div id="ticketListForTable"></div>
+      <div id="ticketListEmpty" class="hint" style="padding:20px 4px; text-align:center;">Bàn này chưa có hoá đơn nào đang mở.</div>
     </div>
 
     <div id="orderView" style="display:none;">
       <div class="row" style="margin-bottom:10px; gap:8px;">
-        <button class="iconbtn" id="btnBackToTables" title="Quay lại danh sách bàn">←</button>
+        <button class="iconbtn" id="btnBackToTables" title="Quay lại danh sách hoá đơn">←</button>
         <div style="flex:1; text-align:center;">
           <div style="font-weight:800; font-size:15px;" id="currentTableLabel">Bàn</div>
           <div class="hint" id="currentTableSub">Đang order</div>
         </div>
-        <button class="btn btn-danger btn-sm" id="btnCancelTicket">Huỷ bàn</button>
+        <button class="btn btn-danger btn-sm" id="btnCancelTicket">Huỷ hoá đơn</button>
       </div>
 
       <div class="cat-scroll" id="catScroll"></div>
@@ -345,6 +356,21 @@ tr:last-child td{border-bottom:none;}
       </div>
     </div>
 
+    <div class="section-title">Sơ đồ bàn</div>
+    <div class="card">
+      <div class="field">
+        <label>Số lượng bàn đánh số (Bàn 1 → N)</label>
+        <input type="number" id="cfgTableCount" min="0" value="8">
+      </div>
+      <button class="btn btn-primary btn-sm" id="btnSaveTableCount" style="margin-bottom:12px;">Lưu số lượng bàn</button>
+      <div class="hint" style="margin:6px 0 8px;">Khu vực / bàn đặt tên riêng (VD: Mang về, Sân sau, VIP...)</div>
+      <div class="swatch-row" id="extraTableList" style="margin-bottom:10px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="newExtraTable" placeholder="Thêm khu vực/bàn mới" style="flex:1;">
+        <button class="btn btn-ghost btn-sm" id="btnAddExtraTable">Thêm</button>
+      </div>
+    </div>
+
     <div class="section-title">Danh mục món</div>
     <div class="card">
       <div class="swatch-row" id="catList" style="margin-bottom:10px;"></div>
@@ -439,20 +465,6 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- New Table Modal -->
-<div class="modal-overlay" id="newTableModal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header"><h3>Mở bàn mới</h3><button class="modal-close" id="closeNewTableModal">✕</button></div>
-    <div class="swatch-row" id="tablePresets" style="margin-bottom:12px;"></div>
-    <div class="field">
-      <label>Hoặc đặt tên khác</label>
-      <input type="text" id="customTableName" placeholder="VD: Bàn VIP, Sân sau...">
-    </div>
-    <button class="btn btn-primary btn-block" id="btnCreateTable">Mở bàn</button>
-  </div>
-</div>
-
 <!-- Server Connection Setup Modal -->
 <div class="modal-overlay" id="setupModal" style="align-items:center;">
   <div class="modal-sheet" style="border-radius:20px; max-width:440px;">
@@ -527,7 +539,7 @@ function mapDbOrder(r){
   return {id:r.id, code:r.code, createdAt:r.created_at, items:r.items||[], subtotal:Number(r.subtotal), vatByRate:r.vat_by_rate||{}, vatTotal:Number(r.vat_total), discount:Number(r.discount), total:Number(r.total), paymentMethod:r.payment_method, customerName:r.customer_name||'', tableName:r.table_name||'', status:r.status};
 }
 function mapDbTicket(r){
-  return {id:r.id, tableName:r.table_name, items:r.items||[], discount:Number(r.discount||0), customerName:r.customer_name||'', createdAt:r.created_at};
+  return {id:r.id, tableName:r.table_name, seq:r.seq||1, items:r.items||[], discount:Number(r.discount||0), customerName:r.customer_name||'', createdAt:r.created_at};
 }
 
 async function refreshFromCloud(parts){
@@ -565,12 +577,13 @@ function rerenderAll(){
 }
 
 /* ---------- State ---------- */
-let CONFIG = { name:"Quán Ăn Cô Ba", address:"", phone:"", taxCode:"", prefix:"HD", vatRates:[0,5,8,10] };
+let CONFIG = { name:"Quán Ăn Cô Ba", address:"", phone:"", taxCode:"", prefix:"HD", vatRates:[0,5,8,10], tableCount:8, extraTables:["Mang về","Giao hàng"] };
 let CATEGORIES = ["Món chính","Nước uống","Khai vị","Tráng miệng"];
 let PRODUCTS = [];
 let ORDERS = [];
 let TICKETS = []; // open tables: {id, tableName, items, discount, customerName, createdAt}
 let currentTicketId = null;
+let currentTableName = null;
 let CART = []; // {productId, name, price, qty, vatRate, unit}
 let activeCategory = "Tất cả";
 let zxingReader = null;
@@ -676,7 +689,7 @@ function dbOrderRow(o){
   return {id:o.id, code:o.code, created_at:o.createdAt, items:o.items, subtotal:o.subtotal, vat_by_rate:o.vatByRate, vat_total:o.vatTotal, discount:o.discount, total:o.total, payment_method:o.paymentMethod, customer_name:o.customerName, table_name:o.tableName||'', status:o.status};
 }
 function dbTicketRow(t){
-  return {id:t.id, table_name:t.tableName, items:t.items, discount:t.discount||0, customer_name:t.customerName||''};
+  return {id:t.id, table_name:t.tableName, seq:t.seq||1, items:t.items, discount:t.discount||0, customer_name:t.customerName||''};
 }
 
 function seedProducts(){
@@ -709,11 +722,12 @@ function bindEvents(){
     });
   });
 
-  document.getElementById('btnNewTable').addEventListener('click', openNewTableModal);
-  document.getElementById('closeNewTableModal').addEventListener('click', ()=>toggleModal('newTableModal', false));
-  document.getElementById('btnCreateTable').addEventListener('click', createTable);
+  document.getElementById('btnBackToTableGrid').addEventListener('click', backToTableGrid);
+  document.getElementById('btnAddInvoice').addEventListener('click', addInvoiceForCurrentTable);
   document.getElementById('btnBackToTables').addEventListener('click', backToTables);
   document.getElementById('btnCancelTicket').addEventListener('click', cancelCurrentTicket);
+  document.getElementById('btnSaveTableCount').addEventListener('click', saveTableCount);
+  document.getElementById('btnAddExtraTable').addEventListener('click', addExtraTable);
 
   document.getElementById('posSearch').addEventListener('input', renderProductGrid);
   document.getElementById('prodSearch').addEventListener('input', renderProductList);
@@ -802,53 +816,80 @@ function ticketTotal(t){
   }, 0) - (t.discount||0);
 }
 
+function getAllTableNames(){
+  const list = [];
+  const n = Number(CONFIG.tableCount||0);
+  for(let i=1;i<=n;i++) list.push('Bàn '+i);
+  (CONFIG.extraTables||[]).forEach(t=>list.push(t));
+  return list;
+}
+
 function renderTableGrid(){
   const grid = document.getElementById('tableGrid');
   const empty = document.getElementById('tableGridEmpty');
-  if(TICKETS.length===0){ grid.innerHTML=''; empty.style.display='block'; return; }
+  const names = getAllTableNames();
+  if(names.length===0){ grid.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  grid.innerHTML = TICKETS.map(t=>{
-    const occupied = t.items.length>0;
-    return `<button class="table-card ${occupied?'occupied':''}" data-id="${t.id}">
+  grid.innerHTML = names.map(name=>{
+    const tickets = TICKETS.filter(t=>t.tableName===name);
+    const occupied = tickets.length>0;
+    const total = tickets.reduce((s,t)=>s+ticketTotal(t),0);
+    return `<button class="table-card ${occupied?'occupied':''}" data-name="${escapeHtml(name)}">
       <span class="tc-status"></span>
-      <div class="tc-name">${escapeHtml(t.tableName)}</div>
-      <div class="tc-info">${occupied ? t.items.reduce((s,i)=>s+i.qty,0)+' món' : 'Chưa gọi món'}</div>
-      ${occupied?`<div class="tc-total num">${fmt(ticketTotal(t))}</div>`:''}
+      <div class="tc-name">${escapeHtml(name)}</div>
+      <div class="tc-info">${occupied ? tickets.length+' hoá đơn đang mở' : 'Bàn trống'}</div>
+      ${occupied?`<div class="tc-total num">${fmt(total)}</div>`:''}
     </button>`;
   }).join('');
   grid.querySelectorAll('.table-card').forEach(card=>{
-    card.addEventListener('click', ()=>openTicket(card.dataset.id));
+    card.addEventListener('click', ()=>openTableDetail(card.dataset.name));
   });
 }
 
-function openNewTableModal(){
-  const used = new Set(TICKETS.map(t=>t.tableName));
-  const presets = [];
-  for(let i=1;i<=8;i++) presets.push('Bàn '+i);
-  presets.push('Mang về','Giao hàng');
-  document.getElementById('tablePresets').innerHTML = presets.map(p=>
-    `<button class="preset-chip" data-name="${escapeHtml(p)}" ${used.has(p)?'disabled style="opacity:.4;"':''}>${escapeHtml(p)}</button>`).join('');
-  document.getElementById('customTableName').value='';
-  document.querySelectorAll('.preset-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      document.querySelectorAll('.preset-chip').forEach(c=>c.classList.remove('selected'));
-      chip.classList.add('selected');
-      document.getElementById('customTableName').value = chip.dataset.name;
-    });
-  });
-  toggleModal('newTableModal', true);
+function openTableDetail(name){
+  currentTableName = name;
+  document.getElementById('tableDetailTitle').textContent = name;
+  document.getElementById('tableListView').style.display='none';
+  document.getElementById('tableDetailView').style.display='block';
+  renderTicketListForTable();
 }
 
-async function createTable(){
-  const name = document.getElementById('customTableName').value.trim();
-  if(!name){ toast('Chọn hoặc nhập tên bàn'); return; }
-  if(TICKETS.find(t=>t.tableName===name)){ toast('Bàn này đang mở, chọn tên khác'); return; }
-  const ticket = {id:uid(), tableName:name, items:[], discount:0, customerName:''};
-  const {error} = await sb.from('open_tickets').insert(dbTicketRow(ticket));
-  if(error){ toast('Lỗi mở bàn — kiểm tra kết nối mạng'); return; }
-  TICKETS.push(ticket);
-  toggleModal('newTableModal', false);
+function renderTicketListForTable(){
+  const tickets = TICKETS.filter(t=>t.tableName===currentTableName).sort((a,b)=>a.seq-b.seq);
+  const wrap = document.getElementById('ticketListForTable');
+  const empty = document.getElementById('ticketListEmpty');
+  if(tickets.length===0){ wrap.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  wrap.innerHTML = tickets.map(t=>{
+    const qty = t.items.reduce((s,i)=>s+i.qty,0);
+    return `<div class="order-row" data-id="${t.id}" style="cursor:pointer;">
+      <div>
+        <div style="font-weight:700; font-size:13.5px;">Hoá đơn ${t.seq}${t.customerName?' · '+escapeHtml(t.customerName):''}</div>
+        <div class="hint">${qty} món</div>
+      </div>
+      <div class="num" style="font-weight:700;">${fmt(ticketTotal(t))}</div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.order-row').forEach(row=>{
+    row.addEventListener('click', ()=>openTicket(row.dataset.id));
+  });
+}
+
+function backToTableGrid(){
+  currentTableName = null;
+  document.getElementById('tableDetailView').style.display='none';
+  document.getElementById('tableListView').style.display='block';
   renderTableGrid();
+}
+
+async function addInvoiceForCurrentTable(){
+  if(!currentTableName) return;
+  const existing = TICKETS.filter(t=>t.tableName===currentTableName);
+  const nextSeq = existing.length ? Math.max(...existing.map(t=>t.seq))+1 : 1;
+  const ticket = {id:uid(), tableName:currentTableName, seq:nextSeq, items:[], discount:0, customerName:''};
+  const {error} = await sb.from('open_tickets').insert(dbTicketRow(ticket));
+  if(error){ toast('Lỗi mở hoá đơn — kiểm tra kết nối mạng'); return; }
+  TICKETS.push(ticket);
   openTicket(ticket.id);
 }
 
@@ -856,12 +897,14 @@ function openTicket(id){
   const t = TICKETS.find(x=>x.id===id);
   if(!t) return;
   currentTicketId = id;
+  currentTableName = t.tableName;
   CART = t.items.map(it=>({...it}));
   document.getElementById('currentTableLabel').textContent = t.tableName;
-  document.getElementById('currentTableSub').textContent = 'Đang order';
+  document.getElementById('currentTableSub').textContent = 'Hoá đơn '+t.seq;
   document.getElementById('custName').value = t.customerName||'';
   document.getElementById('discountInput').value = t.discount||0;
   document.getElementById('tableListView').style.display='none';
+  document.getElementById('tableDetailView').style.display='none';
   document.getElementById('orderView').style.display='block';
   activeCategory = "Tất cả";
   renderCategoryChips(); renderProductGrid(); renderCart();
@@ -871,7 +914,12 @@ function backToTables(){
   currentTicketId = null;
   CART = [];
   document.getElementById('orderView').style.display='none';
-  document.getElementById('tableListView').style.display='block';
+  if(currentTableName){
+    document.getElementById('tableDetailView').style.display='block';
+    renderTicketListForTable();
+  }else{
+    document.getElementById('tableListView').style.display='block';
+  }
   renderTableGrid();
 }
 
@@ -892,11 +940,11 @@ function persistCurrentTicket(){
 async function cancelCurrentTicket(){
   if(!currentTicketId) return;
   const t = TICKETS.find(x=>x.id===currentTicketId);
-  if(!confirm('Huỷ bàn "'+(t?t.tableName:'')+'"? Toàn bộ món trong đơn sẽ mất, không tính vào doanh thu.')) return;
+  if(!confirm('Huỷ hoá đơn này ('+(t?t.tableName+' · Hoá đơn '+t.seq:'')+')? Toàn bộ món sẽ mất, không tính vào doanh thu.')) return;
   await sb.from('open_tickets').delete().eq('id', currentTicketId);
   TICKETS = TICKETS.filter(x=>x.id!==currentTicketId);
   backToTables();
-  toast('Đã huỷ bàn');
+  toast('Đã huỷ hoá đơn');
 }
 
 /* ---------- Cart ---------- */
@@ -1296,6 +1344,8 @@ function fillConfigForm(){
   document.getElementById('cfgPhone').value = CONFIG.phone||'';
   document.getElementById('cfgTaxCode').value = CONFIG.taxCode||'';
   document.getElementById('cfgPrefix').value = CONFIG.prefix||'HD';
+  document.getElementById('cfgTableCount').value = CONFIG.tableCount||0;
+  renderExtraTableList();
 }
 
 async function saveSetting(key, value){
@@ -1313,6 +1363,40 @@ async function saveConfig(){
   await saveSetting('shop-config', CONFIG);
   document.getElementById('shopNameDisplay').textContent = CONFIG.name || 'Quán Ăn';
   toast('Đã lưu cấu hình');
+}
+
+async function saveTableCount(){
+  const n = Math.max(0, Number(document.getElementById('cfgTableCount').value||0));
+  CONFIG.tableCount = n;
+  await saveSetting('shop-config', CONFIG);
+  renderTableGrid();
+  toast('Đã lưu số lượng bàn: '+n);
+}
+
+function renderExtraTableList(){
+  const list = CONFIG.extraTables||[];
+  document.getElementById('extraTableList').innerHTML = list.map(name=>
+    `<div class="vat-tag">${escapeHtml(name)} <button data-name="${escapeHtml(name)}">✕</button></div>`).join('');
+  document.querySelectorAll('#extraTableList button').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const usedByOpenTicket = TICKETS.some(t=>t.tableName===b.dataset.name);
+      if(usedByOpenTicket && !confirm('Khu vực này đang có hoá đơn mở. Vẫn xoá khỏi danh sách?')) return;
+      CONFIG.extraTables = (CONFIG.extraTables||[]).filter(n=>n!==b.dataset.name);
+      await saveSetting('shop-config', CONFIG);
+      renderExtraTableList(); renderTableGrid();
+    });
+  });
+}
+
+async function addExtraTable(){
+  const v = document.getElementById('newExtraTable').value.trim();
+  if(!v) return;
+  CONFIG.extraTables = CONFIG.extraTables||[];
+  if(!CONFIG.extraTables.includes(v)) CONFIG.extraTables.push(v);
+  await saveSetting('shop-config', CONFIG);
+  document.getElementById('newExtraTable').value='';
+  renderExtraTableList(); renderTableGrid();
+  toast('Đã thêm '+v);
 }
 
 function renderVatRates(){
@@ -1363,16 +1447,20 @@ async function resetData(){
   await sb.from('orders').delete().neq('id','');
   await sb.from('products').delete().neq('id','');
   await sb.from('open_tickets').delete().neq('id','');
-  CONFIG = { name:"Quán Ăn Cô Ba", address:"", phone:"", taxCode:"", prefix:"HD", vatRates:[0,5,8,10] };
+  CONFIG = { name:"Quán Ăn Cô Ba", address:"", phone:"", taxCode:"", prefix:"HD", vatRates:[0,5,8,10], tableCount:8, extraTables:["Mang về","Giao hàng"] };
   CATEGORIES = ["Món chính","Nước uống","Khai vị","Tráng miệng"];
   await saveSetting('shop-config', CONFIG);
   await saveSetting('categories', CATEGORIES);
   const seed = seedProducts();
   for(const p of seed){ await sb.from('products').insert(dbProductRow(p)); }
   await refreshFromCloud(['products','orders','settings','tickets']);
-  CART=[]; currentTicketId=null;
-  backToTables();
-  renderProductGrid(); renderProductList(); renderOrders(); renderVatRates(); renderCatList(); fillConfigForm();
+  CART=[]; currentTicketId=null; currentTableName=null;
+  document.getElementById('orderView').style.display='none';
+  document.getElementById('tableDetailView').style.display='none';
+  document.getElementById('tableListView').style.display='block';
+  renderProductGrid(); renderProductList(); renderOrders(); renderVatRates(); renderCatList(); fillConfigForm(); renderTableGrid();
+  document.getElementById('cfgTableCount').value = CONFIG.tableCount;
+  renderExtraTableList();
   toast('Đã đặt lại dữ liệu');
 }
 

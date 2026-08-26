@@ -40,6 +40,7 @@ create table if not exists orders (
 create table if not exists open_tickets (
   id text primary key,
   table_name text not null,
+  seq integer default 1,
   items jsonb default '[]',
   discount numeric default 0,
   customer_name text,
